@@ -38,7 +38,7 @@ This repository contains code & documentation for a data wrangling group project
 
 **Word Cloud Visualizations**
 
-![image1](WordCloud results/plot_allcountries.png)
+![](WordCloud results/plot_allcountries.png)
 ![image2](WordCloud results/plot_allgenres.png)
 ![image3](WordCloud results/wc3_allcomedy.png)
 ![image4](WordCloud results/wc3_alldocumentary.png)
