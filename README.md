@@ -20,6 +20,12 @@ This repository contains code & documentation for a data wrangling group project
 7. dplyr
 8. tidyr
 9. ggplot2
+10. Tensorflow
+11. Sklearn
+12. Math
+13. re
+14. NKTK
+15. Seaborn, Pandas, Numpy, tqdm
 
 **Languages Used**
 
