@@ -2,6 +2,13 @@
 
 This repository contains code & documentation for a data wrangling group project on the Kaggle dataset **Netflix Movies and TV Shows** (https://www.kaggle.com/datasets/shivamb/netflix-shows).
 
+Team Members
+1. Ansh Gupta
+2. Bo Qin
+3. Chinaza Nmam
+4. Digvijay Yadav
+5. Era Wu
+
 **Our Approaches**
 
 1. Cleaning Dataset using Microsoft Excel
