@@ -32,3 +32,10 @@ This repository contains code & documentation for a data wrangling group project
 1. [R Programming](https://www.r-project.org/about.html) - Used for Sentiment Analysis and WordCloud generation.
 2. [Python3](https://www.python.org/download/releases/3.0/) - Used for Genre Prediction.
 3. [Microsoft Excel](https://www.microsoft.com/en-us/microsoft-365/excel) - Primary tool for cleaning our Netflix Data.
+
+
+# Results
+
+**Word Cloud Visualizations**
+
+[!wordcloud1.jpg](https://dartmouth.enterprise.slack.com/files/U01RTKWK456/F04AM3KGASE/wc3_allcomedy.png)
