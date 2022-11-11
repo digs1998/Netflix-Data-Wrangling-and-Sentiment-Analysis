@@ -1,0 +1,683 @@
+---
+title: "Final Project (NLP) - The Rehearsal Group"
+author: "Era Songzhi Wu"
+output:
+  html_document:
+    df_print: paged
+---
+
+
+
+# Natural Language Processing: word clouds (Era S. Wu)
+
+For the final project, we The Rehearsal Group decided to work on a Kaggle dataset concerning Netflix data collected in 2021. I am responsible for the word cloud generation and this technique is a quite simple yet straightforward way of analyzing and visualizing text data patterns.
+```{r setup, include=FALSE, echo=FALSE, warning=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setup & Overview
+
+We start with downloading loading all necessary packages as well as datasets. Then we take an overview at the dataset, especially the column of description which contains summaries of the corresponding item. 
+```{r, echo=FALSE, warning=FALSE}
+# install.packages("tidytext")
+# install.packages("stringr")
+# install.packages("readxl")
+# install.packages("wordcloud")
+# install.packages("wordcloud2")
+# install.packages("RColorBrewer")
+library(tidytext)
+library(stringr)
+library(readxl)
+library(wordcloud)
+library(wordcloud2)
+library(RColorBrewer)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+```
+
+```{r, warning=FALSE}
+#original dataset
+net <- read.csv("netflix_titles.csv")
+
+#dataset processed by teammate Chinaza Nnam
+new <- readxl::read_xls("project_data.xls") %>%
+  mutate(Description = as.character(Description))
+```
+
+```{r}
+head(str_count(net$description))
+max(str_count(net$description))
+
+head(str_count(new$Description))
+max(str_count(new$Description))
+str(new)
+
+des_words <- new %>%
+  select(Description) %>%
+  unnest_tokens(word, Description)
+
+```
+
+
+## Wordcloud 1: what stories are out there?
+
+I started by making a word cloud of all entries in the description column, which essentially results in a general summary of all content on the platform. It appears that the most common keywords include life, family, friends, love, world, and woman. These words will later prove to be the theme of themes.
+It is worth noting that documentary and series are two genre-related words that stand out. We will have the chance to take a closer look at that when we dive into word clouds in different types and genres.
+```{r}
+wc1 <- net %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, random.order=FALSE, colors=brewer.pal(8,"Accent")))
+```
+## Wordcloud 2: what stories are in different types of content?
+
+Netflix content is categorized into two groups: movies and TV shows. The bar plot shows that there are a lot more movies than TV shows on the site. But they seem to share similar themes of world, love, family and friends. In addition, echoing what we see in the first word cloud, "documentary" is outstanding among movies and "series" among TV shows.
+```{r}
+net_type <- net %>%
+  group_by(type) %>%
+  summarize(count = n()) %>%
+  ungroup() %>%
+  arrange(desc(count)) %>%
+  mutate(count = as.numeric(count)) 
+
+net %>%
+  group_by(type) %>%
+  summarize(count = n()) %>%
+  ungroup() %>%
+  arrange(desc(count)) %>%
+  mutate(count = as.numeric(count)) %>%
+  ggplot(., aes(x=type, y=count, fill=type)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label=count), vjust=0) +
+  xlab("Type") +
+  ylab("Count") +
+  guides(fill=guide_legend(title="Type")) +
+ theme(axis.text.x=element_text(size=18)) 
+
+wc2_movie <- net %>%
+  filter(type == "Movie") %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, random.order=FALSE, colors=brewer.pal(8,"Dark2")))
+
+wc2_tv <- net %>%
+  filter(type == "TV Show") %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, random.order=FALSE, colors=brewer.pal(8,"Dark2")))
+```
+## Wordcloud 3: what stories are in different genres of content?
+Since each item can be in up to three genres according to Netflix, I first separated the genres, pivoted the dataframe and removed the NAs. (One can also try keeping only the first genre listed to facilitate the analysis, as in the code commented out). I then ranked the genres by counts. The bar plot shows the most common genres include international movies, dramas, comedies, international TV shows, documentaries, action and adventure, and so on. It is not surprising to me that Netflix has a large amount of dramas or comedies or even documentaries, but I find it interesting that they have quite a lot of international content. This small discovery reminds me that the most lucrative and watched title on Netflix is actually Squid Game, a South Korean drama series. Maybe this is not only indicative of Netflix's global perspective but also of its ambition of building a streaming empire that embraces a multitude of stories.
+
+When it comes to the frequent keywords, dramas and comedies turn out to be born out of the same life elements of family, friends, love and woman. These themes also travel across borders as they come up again in international movies and TV shows, although some darker notes can slip in for internationals, such as murder, war and mystery. Documentaries as well as action & adventure are more heterogeneous on this front: documentaries seem to share only one big theme - documentary itself, while action and adventure content involves mission, war, agent, crime, cop, revenge and rescue.
+
+```{r}
+# net_gr <- net %>%
+#   tidyr::separate(listed_in, c("genre"), sep=",") %>%
+#   filter(genre != "") 
+# net_grcount <- net_gr %>%
+#   group_by(genre) %>%
+#   summarize(count = n()) %>%
+#   ungroup() %>%
+#   arrange(desc(count)) %>%
+#   mutate(count = as.numeric(count))
+# ggplot(net_grcount[1:10, ], aes(x=reorder(genre, desc(count)), y=count, fill=genre)) +
+#   geom_bar(stat = "identity") +
+#   geom_text(aes(label=count), vjust=0) +
+#   xlab("Genre name") +
+#   ylab("Count") +
+#   guides(fill=guide_legend(title="Genre name")) +
+#   theme(axis.text.x = element_text(angle=30, size=16))
+
+net_allgr <- net %>%
+  tidyr::separate(listed_in, c("genre1", "genre2", "genre3"), sep=",") %>%
+  pivot_longer(cols = c(11,12,13), names_to = "number", values_to = "genre") %>%
+  filter(genre != "NA") %>%
+  mutate(genre = trimws(genre))
+net_allgrcount <- net_allgr %>%
+  group_by(genre) %>%
+  summarize(count = n()) %>%
+  ungroup() %>%
+  arrange(desc(count)) %>%
+  mutate(count = as.numeric(count))
+ggplot(net_allgrcount[1:10, ], aes(x=reorder(genre, desc(count)), y=count, fill=genre)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label=count), vjust=0) +
+  xlab("Genre name") +
+  ylab("Count") +
+  guides(fill=guide_legend(title="Genre name")) +
+  theme(axis.text.x = element_text(angle=30, size=16, vjust=0.5))
+
+
+
+wc3_drama <- net_allgr %>%
+  filter(genre == "Dramas") %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, random.order=FALSE, colors=brewer.pal(8,"Paired")))
+
+wc3_comedy <- net_allgr %>%
+  filter(genre == "Comedies") %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, scale=c(4, 0.2), random.order=FALSE, colors=brewer.pal(8,"Paired")))
+
+wc3_intertv <- net_allgr %>%
+  filter(genre == "International TV Shows") %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, random.order=FALSE, colors=brewer.pal(8,"Paired")))
+
+wc3_intermv <- net_allgr %>%
+  filter(genre == "International Movies") %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, scale = c(3, 0.5), random.order=FALSE, colors=brewer.pal(8,"Paired")))
+
+wc3_docu <- net_allgr %>%
+  filter(genre == "Documentaries") %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, random.order=FALSE, colors=brewer.pal(8,"Paired")))
+
+wc3_aa <- net_allgr %>%
+  filter(genre == "Action & Adventure") %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100,  scale = c(3, 0.2), random.order=FALSE, colors=brewer.pal(8,"Paired")))
+
+# wc3_idpd <- net_allgr %>%
+#   filter(genre == "Independent Movies") %>%
+#   select(description) %>%
+#   unnest_tokens(word, description) %>%
+#   anti_join(stop_words) %>%
+#   count(word) %>%
+#   with(wordcloud(word, n, max.words=100, random.order=FALSE, colors=brewer.pal(8,"Paired")))
+# 
+# wc3_rom <- net_allgr %>%
+#   filter(genre == "Romantic Movies") %>%
+#   select(description) %>%
+#   unnest_tokens(word, description) %>%
+#   anti_join(stop_words) %>%
+#   count(word) %>%
+#   with(wordcloud(word, n, max.words=100, random.order=FALSE, colors=brewer.pal(8,"Paired")))
+
+# wc3_standup <- net_gr %>%
+#   filter(genre == "Stand-Up Comedy") %>%
+#   select(description) %>%
+#   unnest_tokens(word, description) %>%
+#   anti_join(stop_words) %>%
+#   count(word) %>%
+#   with(wordcloud(word, n, max.words=100, random.order=FALSE, colors=brewer.pal(8,"Paired")))
+# 
+# wc3_horror <- net_gr %>%
+#   filter(genre == "Horror Movies") %>%
+#   select(description) %>%
+#   unnest_tokens(word, description) %>%
+#   anti_join(stop_words) %>%
+#   count(word) %>%
+#   with(wordcloud(word, n, max.words=100, random.order=FALSE, scale=c(3,0.5), colors=brewer.pal(8,"Paired")))
+```
+
+
+## Wordcloud 4: what stories are there in different countries?
+
+Since many items have more than one production country, I separated the countries, kept the first five participants, pivoted the dataframe and removed the NAs. (One can also try teasing out only the first country listed to facilitate the analysis, as in the code commented out). I then ranked the countries by their participation. Considering this is a dataset about U.S. Netflix, it should not surprise anyone that U.S. comes top. Most of the word clouds reveal that most of the content involving countries other than the U.S. still shares the same universal theme of love, life, friends and family, plus some keywords related to the particular country (e.g., London for U.K., Mumbai for India, Pop for South Korea). However, two countries stand out: Mexico and Japan. Mexico seems to hammer on the national identity as "Mexico" and "Mexican" are the most salient keywords; Japan on the other hand, centers around a different set of themes such as school, evil, battle, power. 
+I find the similarities as well as differences very interesting. We also need to keep in mind that these are contents that Netflix offers to their U.S. audience and may not be representative of the actual cinematic scenery in the original country. 
+```{r}
+# net_ct <- net %>%
+#   tidyr::separate(country, c("country"), sep=",") %>%
+#   filter(country != "") 
+# net_ctcount <- net_ct %>%
+#   group_by(country) %>%
+#   summarize(ctcount = n()) %>%
+#   ungroup() %>%
+#   arrange(desc(ctcount)) %>%
+#   mutate(ctcount = as.numeric(ctcount))
+# ggplot(net_ctcount[1:10, ], aes(x=reorder(country, desc(ctcount)), y=ctcount, fill=country)) +
+#   geom_bar(stat = "identity") +
+#   geom_text(aes(label=ctcount), vjust=0) +
+#   xlab("Country name") +
+#   ylab("Count") +
+#   guides(fill=guide_legend(title="Country name")) +
+#   theme(axis.text.x=element_text(size=17)) 
+
+
+
+net_allct <- net %>%
+  tidyr::separate(country, c("ct1", "ct2", "ct3", "ct4", "ct5"), sep=",") %>%
+  pivot_longer(cols = c(6,7,8,9,10), names_to = "number", values_to = "country") %>%
+  filter(country != "") %>%
+  mutate(country = trimws(country))
+net_allctcount <- net_allct %>%
+  group_by(country) %>%
+  summarize(count = n()) %>%
+  ungroup() %>%
+  arrange(desc(count)) %>%
+  mutate(count = as.numeric(count))
+ggplot(net_allctcount[1:10, ], aes(x=reorder(country, desc(count)), y=count, fill=country)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label=count), vjust=0) +
+  xlab("Country name") +
+  ylab("Count") +
+  guides(fill=guide_legend(title="Country name")) +
+  theme(axis.text.x = element_text(angle=30, size=16))
+
+
+
+wc4_us <- net_allct %>%
+  filter(country == "United States") %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, random.order=FALSE, colors=brewer.pal(8,"Accent")))
+
+wc4_id <- net_allct %>%
+  filter(country == "India") %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, random.order=FALSE, scale=c(4,.2), colors=brewer.pal(8,"Accent")))
+
+wc4_uk <- net_allct %>%
+  filter(country == "United Kingdom") %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, random.order=FALSE, scale=c(4,.2), colors=brewer.pal(8,"Accent")))
+
+wc4_ca <- net_allct %>%
+  filter(country == "Canada") %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=80, scale=c(3,.2), random.order=FALSE, colors=brewer.pal(8,"Accent")))
+
+wc4_fr <- net_allct %>%
+  filter(country == "France") %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, scale=c(3,0.5), random.order=FALSE, colors=brewer.pal(8,"Accent")))
+
+wc4_jp <- net_allct %>%
+  filter(country == "Japan") %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, random.order=FALSE, scale=c(4,.2), colors=brewer.pal(8,"Accent")))
+
+wc4_sp <- net_allct %>%
+  filter(country == "Spain") %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, random.order=FALSE, scale=c(4,.2), colors=brewer.pal(8,"Accent")))
+
+wc4_sk <- net_allct %>%
+  filter(country == "South Korea") %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, random.order=FALSE, colors=brewer.pal(8,"Accent")))
+
+wc4_gm <- net_allct %>%
+  filter(country == "Germany") %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, scale=c(3,0.5), random.order=FALSE, colors=brewer.pal(8,"Accent")))
+
+wc4_mx <- net_allct %>%
+  filter(country == "Mexico") %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, random.order=FALSE, colors=brewer.pal(8,"Accent")))
+
+# wc4_as <- net_allct %>%
+#   filter(country == "Australia") %>%
+#   select(description) %>%
+#   unnest_tokens(word, description) %>%
+#   anti_join(stop_words) %>%
+#   count(word) %>%
+#   with(wordcloud(word, n, max.words=100, random.order=FALSE, colors=brewer.pal(8,"Pastel1")))
+```
+
+
+
+
+
+## Wordcloud 5: what's the zeitgeist?
+A histogram of Netflix content by the release year shows the majority of them are released in recent years, especially around 2017~2019. Using quarter of century (i.e., 25 years) as the time unit, I made word clouds correspondingly. As seen below, the theme of 1925~1950 is the world wars; still shrouded by the aftermath of the wars, 1951~1975 sees a shift to daily life about family, love, woman, girl and also officer and leaders (I am not certain if a feminist rise is the explanation for woman and girl to be outstanding in the word cloud); content release in 1976~2000 gets richer and one step closer what we see these days, concerning family, love, and woman; 2000~2021, the majority of what is on Netflix, align well with the universal themes we see earlier. This age brings friends and documentary to the center. My guess for "friends" is that social networks started blooming around this time and for "documentary" my guess is that people have grown more introspective and curious, and all sorts of resources have become more available for this type of content. 
+```{r}
+net_yrcount <- net %>%
+  group_by(release_year) %>%
+  summarize(count = n()) %>%
+  ungroup() %>%
+  arrange(desc(count)) %>%
+  mutate(count = as.numeric(count))
+ggplot(net, aes(release_year)) +
+  geom_density(color="darkblue", fill="lightblue")
+ggplot(net, aes(release_year)) +
+  geom_histogram(color="darkgreen", fill="lightgreen", bins=30) +
+  labs(x="Release year", y = "Count")
+  
+
+
+net %>%
+  filter(release_year >= 1925 & release_year <= 1950) %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, random.order = FALSE, colors=brewer.pal(8,"Dark2")))
+
+net %>%
+  filter(release_year >= 1951 & release_year <= 1975) %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, scale=c(4,0.5), random.order = FALSE, colors=brewer.pal(8,"Dark2")))
+
+net %>%
+  filter(release_year >= 1976 & release_year <= 2000) %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, random.order = FALSE, colors=brewer.pal(8,"Dark2")))
+
+net %>%
+  filter(release_year >= 2001 & release_year <= 2025) %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, random.order = FALSE, colors=brewer.pal(8,"Dark2")))
+
+
+
+# 
+# net %>%
+#   filter(release_year >= 1951 & release_year <= 1970) %>%
+#   select(description) %>%
+#   unnest_tokens(word, description) %>%
+#   anti_join(stop_words) %>%
+#   count(word) %>%
+#   with(wordcloud(word, n, max.words=100, random.order = FALSE, colors=brewer.pal(8,"Pastel2")))
+# 
+# net %>%
+#   filter(release_year >= 1971 & release_year <= 1990) %>%
+#   select(description) %>%
+#   unnest_tokens(word, description) %>%
+#   anti_join(stop_words) %>%
+#   count(word) %>%
+#   with(wordcloud(word, n, max.words=100, random.order = FALSE, colors=brewer.pal(8,"Pastel2")))
+# 
+# net %>%
+#   filter(release_year >= 1991 & release_year <= 2000) %>%
+#   select(description) %>%
+#   unnest_tokens(word, description) %>%
+#   anti_join(stop_words) %>%
+#   count(word) %>%
+#   with(wordcloud(word, n, scale=c(3, 0.5), max.words=100, random.order = FALSE, colors=brewer.pal(8,"Pastel2")))
+# 
+# net %>%
+#   filter(release_year >= 2001 & release_year <= 2010) %>%
+#   select(description) %>%
+#   unnest_tokens(word, description) %>%
+#   anti_join(stop_words) %>%
+#   count(word) %>%
+#   with(wordcloud(word, n, scale=c(4, 0.5), max.words=100, random.order = FALSE, colors=brewer.pal(8,"Pastel2")))
+# 
+# net %>%
+#   filter(release_year >= 2011 & release_year <= 2020) %>%
+#   select(description) %>%
+#   unnest_tokens(word, description) %>%
+#   anti_join(stop_words) %>%
+#   count(word) %>%
+#   with(wordcloud(word, n, scale=c(4, 0.5), max.words=100, random.order = FALSE, colors=brewer.pal(8,"Pastel2")))
+```
+
+## Wordcloud 6: what's Netflix's game?
+Before running any analysis, I hypothesized that Netflix would adjust their purchasing strategy based on market research, which should be reflected on the kind of content that was added at different times. After extracting the year out of the "date added" column, I made a histogram which shows that the platform added a lot of content around 2019 and 2020. Nevertheless, the 3 word clouds generated chronologically (i.e., before 2017, 2018 and 2019, 2020 and 2021) do not seem to point any particular pattern or trend. Instead, they are all pretty much in accordance with the universal themes. It is possible that a more granular analysis that investigates Netflix content addition on a monthly rather than yearly scale can reveal Netflix's logic of adding new content.
+```{r}
+net_date <- net %>%
+  filter(date_added != "") %>%
+  tidyr::separate(date_added, c("MonthDay", "Year"), sep=",") %>%
+  mutate(Year = trimws(Year))
+net_datecount <- net_date %>%
+  group_by(Year) %>%
+  summarize(count = n()) %>%
+  ungroup() %>%
+  arrange(desc(count)) %>%
+  mutate(count = as.numeric(count))
+ggplot(net_date, aes(Year)) +
+  geom_histogram(color="deeppink", fill="maroon", stat="count") +
+  labs(x="Year added", y = "Count") +
+  theme(axis.text.x=element_text(size=20))  
+
+
+
+net_date %>%
+  filter(Year <= 2017) %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, random.order = FALSE, colors=brewer.pal(8,"Set1")))
+
+net_date %>%
+  filter(Year == 2018 | Year == 2019) %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, random.order = FALSE, colors=brewer.pal(8,"Set1")))
+
+net_date %>%
+  filter(Year == 2020 | Year == 2021) %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, random.order = FALSE, colors=brewer.pal(8,"Set1")))
+
+```
+
+
+## Wordcloud 7: what do the directors like?
+Many items have more than one director, therefore I took out the first three directors, separated the directors, kept the first three names, pivoted the dataframe and removed the NAs. I also decided to focus on content that was produced in the U.S. since data come from the U.S. Netflix site. I then ranked the directors by their number of works on Netflix. The word cloud made using directors who worked on 6 or more items actually revolves around comedies and stand-ups, probably due to the fact that many of them worked primarily on comedy specials and stand-ups, usually collaborating with the same comedian multiple times.
+```{r}
+net_allusdirector <- net %>%
+  filter(country == "United States") %>%
+  tidyr::separate(director, c("director1", "director2", "director3"), sep=",") %>%
+  pivot_longer(cols = c(4,5,6), names_to = "director", values_to = "name") %>%
+  mutate(name = trimws(name)) %>%
+  filter(name != "") 
+net_allusdirectorcount <- net_allusdirector %>%
+  group_by(name) %>%
+  summarize(count = n()) %>%
+  ungroup() %>%
+  arrange(desc(count)) %>%
+  mutate(count = as.numeric(count))
+net_allusdirectorcount %>%
+  filter(as.numeric(count) >= 6) %>%
+  ggplot(., aes(x=reorder(name, desc(count)), y=count, fill=name)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label=count), vjust=0) +
+  xlab("Director name") +
+  ylab("Count") +
+  guides(fill=guide_legend(title="Director name")) +
+  theme(axis.text.x = element_text(angle=30, size=16, vjust=0.5))
+
+# net_alldirector <- net %>%
+#   tidyr::separate(director, c("director1", "director2", "director3"), sep=",") %>%
+#   pivot_longer(cols = c(4,5,6), names_to = "director", values_to = "name") %>%
+#   mutate(name = trimws(name)) %>%
+#   filter(name != "") 
+# net_alldirectorcount <- net_alldirector %>%
+#   group_by(name) %>%
+#   summarize(count = n()) %>%
+#   ungroup() %>%
+#   arrange(desc(count)) %>%
+#   mutate(count = as.numeric(count))
+# net_alldirectorcount %>%
+#   filter(as.numeric(count) >= 5) %>%
+#   ggplot(., aes(x=reorder(name, desc(count)), y=count, fill=name)) +
+#   geom_bar(stat = "identity") +
+#   geom_text(aes(label=count), vjust=0) +
+#   xlab("Country name") +
+#   ylab("Count") +
+#   guides(fill=guide_legend(title="Country name")) +
+#   theme(axis.text.x=element_text(size=16)) 
+
+
+net_allusdirector %>%
+  filter(name == "Jay Karas"| name == "Marcus Rugby"| name == "Jay Chapman"| name == "Shannon Hartman"| name == "Martin Scorsese"| name == "Ryan Polito"| name == "Troy Miller"| name == "Lance Bangs"| name == "Leslie Small" | name == "Michael Simon" | name == "Robert Rodriguez"| name == "Steven Spielberg"| name == "Vlad Yudin"| name =="	
+William Lau") %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, random.order = FALSE, colors=brewer.pal(8,"Set2")))
+
+net_allusdirector %>%
+  filter(name == "Martin Scorsese") %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=30, scale = c(3, 0.5), random.order = FALSE, colors=brewer.pal(8,"Set2")))
+```
+
+## Wordcloud 8: what do the actors like?
+Before creating word clouds for actors, I separated the cast, kept the top five actors, pivoted the dataframe and removed the NAs. (One can also try teasing out only the first actor listed to facilitate the analysis.) I also decided to focus on content that was produced in the U.S. since this is the U.S. Netflix site. I then ranked the actors by their number of appearances in Netflix content. The word cloud made using actors who appeared 10 or more times actually does not align with the universal theme we saw over and over again - this time the keywords lean towards politics and action as they include "war", "government", "power", and so on. My hypothesis is that the majority of these actors are non-female, and thus are cast in certain roles and content. 
+
+```{r}
+net_allusactor <- net %>%
+  filter(country == "United States") %>%
+  tidyr::separate(cast, c("actor1", "actor2", "actor3", "actor4", "actor5"), sep=",") %>%
+  pivot_longer(cols = c(5,6,7,8,9), names_to = "actor", values_to = "name") %>%
+  mutate(name = trimws(name)) %>%
+  filter(name != "")
+net_allusactorcount <- net_allusactor %>%
+  group_by(name) %>%
+  summarize(count = n()) %>%
+  ungroup() %>%
+  arrange(desc(count)) %>%
+  mutate(count = as.numeric(count))
+net_allusactorcount %>%
+  filter(as.numeric(count) >= 10) %>%
+  ggplot(., aes(x=reorder(name, desc(count)), y=count, fill=name)) +
+  geom_bar(stat = "identity") +
+  geom_text(aes(label=count), vjust=0) +
+  xlab("Actor name") +
+  ylab("Count") +
+  guides(fill=guide_legend(title="Actor name")) +
+  theme(axis.text.x=element_text(angle=30, size=10))
+
+# net_allactor <- net %>%
+#   tidyr::separate(cast, c("actor1", "actor2", "actor3", "actor4", "actor5"), sep=",") %>%
+#   filter(actor1 != "") %>%
+#   pivot_longer(cols = c(5,6,7,8,9), names_to = "actor", values_to = "name")
+# net_allactorcount <- net_allactor %>%
+#   group_by(name) %>%
+#   summarize(count = n()) %>%
+#   ungroup() %>%
+#   arrange(desc(count)) %>%
+#   mutate(count = as.numeric(count))
+# ggplot(net_allactorcount[1:10, ], aes(x=reorder(name, desc(count)), y=count, fill=name)) +
+#   geom_bar(stat = "identity") +
+#   geom_text(aes(label=count), vjust=0) +
+#   xlab("Actor name") +
+#   ylab("Count") +
+#   guides(fill=guide_legend(title="Actor name")) +
+#   theme(axis.text.x=element_text(angle=30, size=10)) 
+
+# net_account <- net_ac %>%
+#   filter(country=="United States") %>%
+#   group_by(actor) %>%
+#   summarize(count = n()) %>%
+#   ungroup() %>%
+#   arrange(desc(count)) %>%
+#   mutate(count = as.numeric(count))
+# net_actorcount <- net_actor %>%
+#   group_by(name) %>%
+#   summarize(count = n()) %>%
+#   ungroup() %>%
+#   arrange(desc(count)) %>%
+#   mutate(count = as.numeric(count))
+
+
+
+net_allusactor %>%
+  filter(name == "Adam Sandler" | name == "Dennis Quaid" | name == "Samuel L. Jackson" | name == "Morgan Freeman" | name == "Seth Rogen" | name == "Nicolas Cage" | name == "Will Smith" | name == "James Franco" | name == "John Travolta") %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=100, scale = c(3, 0.5), random.order = FALSE, colors=brewer.pal(8,"Set3")))
+
+net_allusactor %>%
+  filter(name == "Nicolas Cage") %>%
+  select(description) %>%
+  unnest_tokens(word, description) %>%
+  anti_join(stop_words) %>%
+  count(word) %>%
+  with(wordcloud(word, n, max.words=60, scale = c(3, 0.5), random.order = FALSE, colors=brewer.pal(8,"Set3")))
+
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+References:
+"How to Generate Word Clouds in R" <https://towardsdatascience.com/create-a-word-cloud-with-r-bde3e7422e8a>
