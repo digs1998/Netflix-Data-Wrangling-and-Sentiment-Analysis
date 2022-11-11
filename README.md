@@ -2,7 +2,7 @@
 
 This repository contains code & documentation for a data wrangling group project on the Kaggle dataset **Netflix Movies and TV Shows** (https://www.kaggle.com/datasets/shivamb/netflix-shows).
 
-Team Members
+**Team Members**
 1. Ansh Gupta
 2. Bo Qin
 3. Chinaza Nmam
