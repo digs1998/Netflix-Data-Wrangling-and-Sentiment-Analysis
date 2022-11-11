@@ -34,11 +34,4 @@ This repository contains code & documentation for a data wrangling group project
 3. [Microsoft Excel](https://www.microsoft.com/en-us/microsoft-365/excel) - Primary tool for cleaning our Netflix Data.
 
 
-# Results
 
-**Word Cloud Visualizations**
-
-!(WordCloud results/plot_allcountries.png)
-!(WordCloud results/plot_allgenres.png)
-!(WordCloud results/wc3_allcomedy.png)
-!(WordCloud results/wc3_alldocumentary.png)
