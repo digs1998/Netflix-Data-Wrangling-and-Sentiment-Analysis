@@ -38,4 +38,4 @@ This repository contains code & documentation for a data wrangling group project
 
 **Word Cloud Visualizations**
 
-[!wordcloud1.jpg](https://dartmouth.enterprise.slack.com/files/U01RTKWK456/F04AM3KGASE/wc3_allcomedy.png)
+[!](https://dartmouth.enterprise.slack.com/files/U01RTKWK456/F04AM3KGASE/wc3_allcomedy.png)
