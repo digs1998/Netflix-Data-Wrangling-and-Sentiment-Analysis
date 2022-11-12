@@ -33,6 +33,7 @@ This repository contains code & documentation for a data wrangling group project
 13. re
 14. NKTK
 15. Seaborn, Pandas, Numpy, tqdm
+16. syuzhet (for the get_nrc_sentiment) function
 
 **Languages Used**
 
