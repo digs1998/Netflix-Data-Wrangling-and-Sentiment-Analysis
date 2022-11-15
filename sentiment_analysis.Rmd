@@ -1,0 +1,56 @@
+---
+title: "R Notebook"
+output:
+  pdf_document: default
+  html_notebook: default
+---
+
+```{r}
+#Sentiment Analysis: Ansh Gupta 
+library("readxl")
+setwd("~/Desktop")
+df = read_excel("~/Desktop/cleaned_netflix_data.xls")
+head(df)
+```
+```{r}
+#install.packages("tidytext")
+library(tidytext)
+library(dplyr)
+
+```
+```{r}
+#install.packages("syuzhet")
+#install.packages("lubridate")
+#install.packages("ggplot2")
+#install.packages("scales")
+#install.packages("reshape2")
+#install.packages("dplyr")
+#remove.packages(c("ggplot2", "data.table"))
+#install.packages('Rcpp', dependencies = TRUE)
+#install.packages('ggplot2', dependencies = TRUE)
+#install.packages('data.table', dependencies = TRUE)
+library(syuzhet)
+library(lubridate)
+library(ggplot2)
+library(scales)
+library(reshape2)
+
+#View(df)
+summary <- iconv(df$Description)
+
+#using the get_nrc_sentiment function to implement Sentiment Analysis since it uses a list of words for each emotions and returns a score accordingly. 
+summary
+sentiment_scores <- get_nrc_sentiment(summary)
+head(sentiment_scores)
+revised_sentiment_scores = subset(sentiment_scores, select = -c(trust,negative, positive))
+head(revised_sentiment_scores)
+```
+```{r}
+#Plotting what different Emotional Categories for Movies and TV Shows Netflix invested in from 2008 to 2022.
+barplot(colSums(revised_sentiment_scores),
+        las = 2,
+        col = rainbow(10),
+        ylab = 'Count',
+        main = 'Sentiment Scores for Descriptions')
+```
+
